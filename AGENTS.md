@@ -116,8 +116,7 @@ Backend:
 
 LLM/Search:
 
-* OpenRouter through OpenAI-compatible client
-* Anthropic API
+* OpenRouter through an OpenAI-compatible client for all model calls
 * Tavily
 * Exa
 * Brave Search API
@@ -201,7 +200,7 @@ Never hardcode:
 * API keys
 * Database URLs
 * Redis URLs
-* Model provider keys
+* OpenRouter model provider key
 * Search provider keys
 * Production URLs
 * Secrets
@@ -314,10 +313,9 @@ Use:
 ```txt
 services/llm_router.py
 services/openrouter_client.py
-services/anthropic_client.py
 ```
 
-Do not call OpenRouter, OpenAI, or Anthropic directly inside agent workflow files.
+Do not call OpenRouter directly inside agent workflow files; use the centralized OpenRouter client/router. Do not add direct OpenAI or Anthropic model clients or API keys.
 
 Every LLM call must track:
 
@@ -340,6 +338,8 @@ LLM calls must:
 * Fail clearly when model output is invalid
 
 Never trust model output blindly.
+
+Model provider configuration must stay single-key: `OPENROUTER_API_KEY` is the only model API key. OpenRouter model IDs may use provider prefixes such as `openai/...` or `anthropic/...`, but those prefixes must not introduce direct OpenAI or Anthropic API keys or clients.
 
 ---
 

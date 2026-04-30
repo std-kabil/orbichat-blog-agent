@@ -47,8 +47,8 @@ Build a production-ready Python backend service that can:
 3. Store topics, sources, drafts, fact checks, social posts, model calls, and run logs in PostgreSQL.
 4. Expose FastAPI endpoints for triggering and inspecting agent workflows.
 5. Use Celery + Redis for long-running jobs.
-6. Use OpenRouter for Qwen, Kimi, and GPT model calls.
-7. Use Anthropic API for Claude writing/polishing/social generation.
+6. Use OpenRouter for all model calls, including Qwen, Kimi, GPT, and Claude-family models.
+7. Use a single model API key: `OPENROUTER_API_KEY`.
 8. Use Tavily, Exa, and Brave Search for research/source verification.
 9. Track estimated token/model/search costs.
 10. Keep all outputs reviewable and auditable.
@@ -122,8 +122,7 @@ loguru
 
 ### LLM providers
 
-OpenRouter using OpenAI-compatible API client  
-Anthropic API for Claude models
+OpenRouter using an OpenAI-compatible API client for all model calls
 
 ### Search/research providers
 
@@ -215,7 +214,7 @@ Purpose:
 
 Model:
 
-- Claude Sonnet 4.6 through Anthropic API
+- Claude Sonnet 4.6 through OpenRouter
 
 Purpose:
 
@@ -266,7 +265,7 @@ Purpose:
 
 Model:
 
-- Claude Sonnet 4.6 through Anthropic API
+- Claude Sonnet 4.6 through OpenRouter
 
 Purpose:
 
@@ -278,7 +277,7 @@ Purpose:
 
 Model:
 
-- Claude Haiku 4.5 through Anthropic API
+- Claude Haiku 4.5 through OpenRouter
 
 Purpose:
 
@@ -315,9 +314,6 @@ REDIS_URL=redis://redis:6379/0
 OPENROUTER_API_KEY=
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 
-ANTHROPIC_API_KEY=
-OPENAI_API_KEY=
-
 TAVILY_API_KEY=
 EXA_API_KEY=
 BRAVE_API_KEY=
@@ -348,12 +344,12 @@ CLAIM_EXTRACTION_MODEL=moonshotai/kimi-k2.6
 RISKY_CLAIM_REVIEW_MODEL=openai/gpt-5.4-mini
 PUBLISH_JUDGMENT_MODEL=openai/gpt-5.4
 
-ARTICLE_WRITING_MODEL=claude-sonnet-4.6
-BRAND_POLISH_MODEL=claude-sonnet-4.6
-SOCIAL_POSTS_MODEL=claude-haiku-4.5
+ARTICLE_WRITING_MODEL=anthropic/claude-sonnet-4.6
+BRAND_POLISH_MODEL=anthropic/claude-sonnet-4.6
+SOCIAL_POSTS_MODEL=anthropic/claude-haiku-4.5
 ````
 
-Do not hardcode API keys.
+Do not hardcode API keys. All model calls must use `OPENROUTER_API_KEY`; do not add provider-specific model API keys such as `ANTHROPIC_API_KEY` or `OPENAI_API_KEY`. Provider prefixes in model IDs, such as `anthropic/...`, are OpenRouter model identifiers and do not require separate provider API keys.
 
 ---
 
@@ -407,7 +403,6 @@ agent/
     __init__.py
     llm_router.py
     openrouter_client.py
-    anthropic_client.py
     tavily_client.py
     exa_client.py
     brave_client.py
@@ -637,7 +632,7 @@ draft_id UUID FK blog_drafts.id nullable
 topic_id UUID FK topics.id nullable
 
 task_name string
-provider string // openrouter, anthropic, openai
+provider string // openrouter
 model string
 
 input_tokens integer default 0
@@ -832,12 +827,12 @@ Steps:
 5. Save sources.
 6. Generate SEO angles with Kimi.
 7. Generate outline with Kimi.
-8. Write article with Claude Sonnet.
+8. Write article with Claude Sonnet through OpenRouter.
 9. Extract factual claims with Kimi.
 10. Verify claims through Tavily/Exa/Brave and deterministic rules.
 11. Review risky claims with GPT-5.4 mini/GPT-5.4.
-12. Brand polish with Claude Sonnet.
-13. Generate social posts with Claude Haiku.
+12. Brand polish with Claude Sonnet through OpenRouter.
+13. Generate social posts with Claude Haiku through OpenRouter.
 14. Run deterministic publish checks.
 15. Run GPT-5.4 publish judgment.
 16. Save draft, fact checks, social posts.
@@ -1037,7 +1032,6 @@ Implement:
 ```txt
 services/llm_router.py
 services/openrouter_client.py
-services/anthropic_client.py
 ```
 
 `llm_router.py` should expose high-level functions:
@@ -1045,7 +1039,6 @@ services/anthropic_client.py
 ```python
 async def call_openrouter_json(...)
 async def call_openrouter_text(...)
-async def call_anthropic_text(...)
 ```
 
 Each model call should:
@@ -1312,7 +1305,6 @@ Implement this project in phases.
 ### Phase 3: External service clients
 
 * OpenRouter client.
-* Anthropic client.
 * Tavily client.
 * Exa client.
 * Brave client.

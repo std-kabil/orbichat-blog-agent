@@ -2,21 +2,59 @@ services:
   agent-api:
     build: .
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/orbichat_blog_agent
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
 
   agent-worker:
     build: .
-    command: celery -A jobs.celery_app worker
+    command: celery -A jobs.celery_app worker --loglevel=info
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/orbichat_blog_agent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
 
   agent-scheduler:
     build: .
-    command: celery -A jobs.celery_app beat
+    command: celery -A jobs.celery_app beat --loglevel=info
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@postgres:5432/orbichat_blog_agent
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
 
   redis:
     image: redis:7
+    ports:
+      - "6379:6379"
 
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_DB: orbichat_agent
-      POSTGRES_USER: orbichat
-      POSTGRES_PASSWORD: orbichat
+      POSTGRES_DB: orbichat_blog_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:
