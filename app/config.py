@@ -46,6 +46,35 @@ class Settings(BaseSettings):
 
     agent_daily_budget_usd: Decimal = Field(default=Decimal("2.00"))
     agent_monthly_budget_usd: Decimal = Field(default=Decimal("50.00"))
+    llm_model_pricing: dict[str, dict[str, Decimal]] = Field(
+        default_factory=lambda: {
+            "qwen/qwen3.6-plus": {"input_per_million": Decimal("0.30"), "output_per_million": Decimal("1.20")},
+            "moonshotai/kimi-k2.6": {
+                "input_per_million": Decimal("0.60"),
+                "output_per_million": Decimal("2.50"),
+            },
+            "openai/gpt-5.4-mini": {
+                "input_per_million": Decimal("0.25"),
+                "output_per_million": Decimal("2.00"),
+            },
+            "openai/gpt-5.4": {"input_per_million": Decimal("2.00"), "output_per_million": Decimal("8.00")},
+            "anthropic/claude-sonnet-4.6": {
+                "input_per_million": Decimal("3.00"),
+                "output_per_million": Decimal("15.00"),
+            },
+            "anthropic/claude-haiku-4.5": {
+                "input_per_million": Decimal("0.80"),
+                "output_per_million": Decimal("4.00"),
+            },
+        }
+    )
+    search_provider_pricing: dict[str, Decimal] = Field(
+        default_factory=lambda: {
+            "tavily": Decimal("0.005"),
+            "exa": Decimal("0.005"),
+            "brave": Decimal("0.001"),
+        }
+    )
 
     topic_scoring_model: str = "qwen/qwen3.6-plus"
     seo_angles_model: str = "moonshotai/kimi-k2.6"

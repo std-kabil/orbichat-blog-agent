@@ -19,6 +19,7 @@ class TavilySearchClient:
     def __init__(self, settings: Settings, http_client: httpx.AsyncClient | None = None) -> None:
         if not settings.tavily_api_key:
             raise ServiceConfigurationError("TAVILY_API_KEY is required for Tavily search")
+        self._settings = settings
         self._api_key = settings.tavily_api_key
         self._http_client = http_client
 
@@ -46,6 +47,7 @@ class TavilySearchClient:
                 draft_id=draft_id,
                 result_count=len(results),
                 latency_ms=elapsed_ms(started_at),
+                settings=self._settings,
             )
             return results
         except Exception as exc:
@@ -58,6 +60,7 @@ class TavilySearchClient:
                 draft_id=draft_id,
                 result_count=0,
                 latency_ms=elapsed_ms(started_at),
+                settings=self._settings,
                 success=False,
                 error=str(exc),
             )

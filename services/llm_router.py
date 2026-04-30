@@ -6,9 +6,11 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import Settings
+from services.budget import assert_budget_available
 from services.cost_tracker import elapsed_ms, extract_llm_usage, monotonic_time, record_llm_call
 from services.errors import ProviderResponseError
 from services.openrouter_client import ChatMessage, OpenRouterClient, extract_message_content
+from services.pricing import estimate_llm_call_cost
 
 OutputModel = TypeVar("OutputModel", bound=BaseModel)
 
@@ -27,9 +29,23 @@ async def call_openrouter_text(
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> str:
-    openrouter = client or OpenRouterClient(settings)
     started_at = monotonic_time()
     try:
+        assert_budget_available(
+            settings=settings,
+            db=db,
+            estimated_cost_usd=estimate_llm_call_cost(
+                settings=settings,
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+            ),
+            run_id=run_id,
+            task_name=task_name,
+            provider="openrouter",
+            model=model,
+        )
+        openrouter = client or OpenRouterClient(settings)
         completion = await openrouter.chat_completion(
             model=model,
             messages=messages,
@@ -42,6 +58,7 @@ async def call_openrouter_text(
             db,
             task_name=task_name,
             model=model,
+            settings=settings,
             run_id=run_id,
             draft_id=draft_id,
             topic_id=topic_id,
@@ -55,6 +72,7 @@ async def call_openrouter_text(
             db,
             task_name=task_name,
             model=model,
+            settings=settings,
             run_id=run_id,
             draft_id=draft_id,
             topic_id=topic_id,
@@ -80,7 +98,6 @@ async def call_openrouter_json(
     temperature: float | None = None,
     max_tokens: int | None = None,
 ) -> OutputModel:
-    openrouter = client or OpenRouterClient(settings)
     started_at = monotonic_time()
     response_format: dict[str, object] = {
         "type": "json_schema",
@@ -91,6 +108,21 @@ async def call_openrouter_json(
         },
     }
     try:
+        assert_budget_available(
+            settings=settings,
+            db=db,
+            estimated_cost_usd=estimate_llm_call_cost(
+                settings=settings,
+                model=model,
+                messages=messages,
+                max_tokens=max_tokens,
+            ),
+            run_id=run_id,
+            task_name=task_name,
+            provider="openrouter",
+            model=model,
+        )
+        openrouter = client or OpenRouterClient(settings)
         completion = await openrouter.chat_completion(
             model=model,
             messages=messages,
@@ -104,6 +136,7 @@ async def call_openrouter_json(
             db,
             task_name=task_name,
             model=model,
+            settings=settings,
             run_id=run_id,
             draft_id=draft_id,
             topic_id=topic_id,
@@ -117,6 +150,7 @@ async def call_openrouter_json(
             db,
             task_name=task_name,
             model=model,
+            settings=settings,
             run_id=run_id,
             draft_id=draft_id,
             topic_id=topic_id,

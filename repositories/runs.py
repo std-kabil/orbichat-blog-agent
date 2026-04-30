@@ -77,6 +77,23 @@ def mark_run_failed(db: Session, run_id: UUID, error_message: str) -> AgentRun |
     return run
 
 
+def mark_run_failed_with_metadata(
+    db: Session,
+    run_id: UUID,
+    *,
+    error_message: str,
+    metadata_json: dict[str, Any],
+) -> AgentRun | None:
+    run = mark_run_failed(db, run_id, error_message)
+    if run is None:
+        return None
+
+    run.metadata_json = metadata_json
+    db.commit()
+    db.refresh(run)
+    return run
+
+
 def update_run_totals(db: Session, run_id: UUID, costs: CostSummary) -> AgentRun | None:
     run = get_run(db, run_id)
     if run is None:

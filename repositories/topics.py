@@ -28,6 +28,30 @@ def update_topic_status(db: Session, topic_id: UUID, status: TopicStatus) -> Top
     return topic
 
 
+def select_next_weekly_topic(db: Session) -> Topic | None:
+    approved_statement = (
+        select(Topic)
+        .where(Topic.status == TopicStatus.APPROVED.value)
+        .order_by(Topic.created_at.asc())
+        .limit(1)
+    )
+    approved_topic = db.scalars(approved_statement).first()
+    if approved_topic is not None:
+        return approved_topic
+
+    recommended_statement = (
+        select(Topic)
+        .where(Topic.recommended.is_(True), Topic.status == TopicStatus.CANDIDATE.value)
+        .order_by(Topic.total_score.desc(), Topic.created_at.asc())
+        .limit(1)
+    )
+    return db.scalars(recommended_statement).first()
+
+
+def mark_topic_drafted(db: Session, topic_id: UUID) -> Topic | None:
+    return update_topic_status(db, topic_id, TopicStatus.DRAFTED)
+
+
 def create_scored_topic(db: Session, *, run_id: UUID, score: TopicScoreOutput) -> Topic:
     topic = Topic(
         run_id=run_id,

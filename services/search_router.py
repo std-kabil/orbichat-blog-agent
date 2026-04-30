@@ -5,8 +5,12 @@ from sqlalchemy.orm import Session
 from app.config import Settings
 from schemas.common import SearchProvider
 from schemas.search import NormalizedSearchResult, SearchProviderWarning, SearchRouterResult
+from services.budget import assert_budget_available
 from services.brave_client import BraveSearchClient
+from services.cost_tracker import record_search_call
+from services.errors import BudgetExceededError
 from services.exa_client import ExaSearchClient
+from services.pricing import calculate_search_cost
 from services.search_provider_config import enabled_search_providers
 from services.tavily_client import TavilySearchClient
 
@@ -40,6 +44,17 @@ class SearchRouter:
 
         for provider in enabled_search_providers(self._settings):
             try:
+                assert_budget_available(
+                    settings=self._settings,
+                    db=db,
+                    estimated_cost_usd=calculate_search_cost(
+                        settings=self._settings,
+                        provider=provider.value,
+                    ),
+                    run_id=run_id,
+                    task_name="search",
+                    provider=provider.value,
+                )
                 provider_results = await self._search_provider(
                     provider=provider,
                     query=query,
@@ -51,6 +66,20 @@ class SearchRouter:
                 )
                 results.extend(provider_results)
             except Exception as exc:
+                if isinstance(exc, BudgetExceededError):
+                    record_search_call(
+                        db,
+                        provider=provider.value,
+                        query=query,
+                        result_count=0,
+                        latency_ms=None,
+                        settings=self._settings,
+                        run_id=run_id,
+                        topic_id=topic_id,
+                        draft_id=draft_id,
+                        success=False,
+                        error=str(exc),
+                    )
                 warnings.append(
                     SearchProviderWarning(
                         provider=provider,

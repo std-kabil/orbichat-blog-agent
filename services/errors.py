@@ -8,3 +8,7 @@ class ExternalServiceError(RuntimeError):
 
 class ProviderResponseError(RuntimeError):
     """Raised when a provider returns an unusable response shape."""
+
+
+class BudgetExceededError(RuntimeError):
+    """Raised when a provider call would exceed configured agent budgets."""
