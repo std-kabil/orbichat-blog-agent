@@ -1,0 +1,33 @@
+[project]
+name = "orbichat-blog-agent"
+version = "0.1.0"
+description = "Orbichat blog agent scaffold."
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi",
+  "uvicorn",
+  "celery",
+  "redis",
+  "sqlalchemy",
+  "alembic",
+  "psycopg[binary]",
+  "pydantic",
+  "pydantic-settings",
+  "httpx",
+  "tenacity",
+  "python-dotenv",
+  "orjson",
+  "loguru",
+  "openai",
+  "anthropic",
+  "tavily-python",
+  "exa-py",
+  "sentry-sdk",
+  "pytest",
+  "ruff",
+  "mypy",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

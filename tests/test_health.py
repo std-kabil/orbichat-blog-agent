@@ -1,0 +1,1 @@
+"""Health endpoint test placeholder."""

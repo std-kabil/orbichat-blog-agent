@@ -1,0 +1,22 @@
+services:
+  agent-api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+  agent-worker:
+    build: .
+    command: celery -A jobs.celery_app worker
+
+  agent-scheduler:
+    build: .
+    command: celery -A jobs.celery_app beat
+
+  redis:
+    image: redis:7
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: orbichat_agent
+      POSTGRES_USER: orbichat
+      POSTGRES_PASSWORD: orbichat
