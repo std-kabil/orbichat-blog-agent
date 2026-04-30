@@ -12,6 +12,7 @@ COPY app ./app
 COPY api ./api
 COPY agents ./agents
 COPY jobs ./jobs
+COPY repositories ./repositories
 COPY schemas ./schemas
 COPY services ./services
 COPY alembic ./alembic

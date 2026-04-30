@@ -5,6 +5,7 @@ from schemas.common import DraftStatus, RunStatus, SearchProvider, TopicStatus
 from schemas.cost import CostSummary, ModelUsageSummary
 from schemas.draft import DraftRead
 from schemas.topic import TopicRead
+from schemas.trend import TopicScoreOutput
 
 
 def test_domain_enums_serialize_as_strings() -> None:
@@ -87,3 +88,30 @@ def test_cost_summary_schema_serializes_usage() -> None:
     )
 
     assert summary.model_usage[0].provider == "openrouter"
+
+
+def test_topic_score_output_accepts_provider_aliases() -> None:
+    score = TopicScoreOutput.model_validate(
+        {
+            "topic_title": "Gemini vs Grok for research workflows",
+            "primary_keyword": "Gemini vs Grok",
+            "intent": "vs",
+            "trendiness_score": "74",
+            "orbichat_fit_score": 88,
+            "organic_search_score": 71,
+            "business_value_score": 62,
+            "rationale": "Useful comparison topic for AI chat users.",
+            "conversion_angle": "Compare models side by side with saved chats and seamless switching.",
+        }
+    )
+
+    assert score.title == "Gemini vs Grok for research workflows"
+    assert score.target_keyword == "Gemini vs Grok"
+    assert score.search_intent == "comparison"
+    assert score.trend_score == 74
+    assert score.orbichat_relevance_score == 88
+    assert score.seo_score == 71
+    assert score.conversion_score == 62
+    assert score.total_score == 74
+    assert score.recommended is True
+    assert score.cta_angle.startswith("Compare models")

@@ -14,6 +14,10 @@ class ExampleResponse(BaseModel):
     answer: str
 
 
+class ItemsResponse(BaseModel):
+    items: list[str]
+
+
 class FakeOpenRouterClient:
     def __init__(self, content: str) -> None:
         self.content = content
@@ -31,6 +35,28 @@ class FakeOpenRouterClient:
         self.response_format = response_format
         return SimpleNamespace(
             choices=[SimpleNamespace(message=SimpleNamespace(content=self.content))],
+            usage=SimpleNamespace(prompt_tokens=3, completion_tokens=4),
+        )
+
+
+class SequencedOpenRouterClient:
+    def __init__(self, contents: list[str]) -> None:
+        self.contents = contents
+        self.messages: list[list[dict[str, str]]] = []
+
+    async def chat_completion(
+        self,
+        *,
+        model: str,
+        messages: list[dict[str, str]],
+        response_format: dict[str, object] | None = None,
+        temperature: float | None = None,
+        max_tokens: int | None = None,
+    ) -> object:
+        self.messages.append(messages)
+        index = min(len(self.messages) - 1, len(self.contents) - 1)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(message=SimpleNamespace(content=self.contents[index]))],
             usage=SimpleNamespace(prompt_tokens=3, completion_tokens=4),
         )
 
@@ -79,6 +105,60 @@ async def test_openrouter_json_validates_response_model() -> None:
     assert result.answer == "yes"
     assert fake_client.response_format is not None
     assert fake_client.response_format["type"] == "json_schema"
+
+
+@pytest.mark.anyio
+async def test_openrouter_json_accepts_common_provider_wrappers() -> None:
+    result = await call_openrouter_json(
+        settings=Settings(openrouter_api_key="key"),
+        model="openai/gpt-5.4-mini",
+        messages=[{"role": "user", "content": "return json"}],
+        task_name="json_task",
+        response_model=ExampleResponse,
+        client=cast(OpenRouterClient, FakeOpenRouterClient('{"output": {"answer": "yes"}}')),
+    )
+
+    assert result.answer == "yes"
+
+
+@pytest.mark.anyio
+async def test_openrouter_json_wraps_bare_list_for_single_list_field_models() -> None:
+    result = await call_openrouter_json(
+        settings=Settings(openrouter_api_key="key"),
+        model="openai/gpt-5.4-mini",
+        messages=[{"role": "user", "content": "return json"}],
+        task_name="json_task",
+        response_model=ItemsResponse,
+        client=cast(OpenRouterClient, FakeOpenRouterClient('["one", "two"]')),
+    )
+
+    assert result.items == ["one", "two"]
+
+
+@pytest.mark.anyio
+async def test_openrouter_json_retries_after_schema_validation_error(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    calls: list[dict[str, object]] = []
+
+    def fake_record_llm_call(db: object, **kwargs: object) -> None:
+        calls.append(kwargs)
+
+    monkeypatch.setattr("services.llm_router.record_llm_call", fake_record_llm_call)
+
+    fake_client = SequencedOpenRouterClient(['{"wrong": "field"}', '{"answer": "yes"}'])
+
+    result = await call_openrouter_json(
+        settings=Settings(openrouter_api_key="key"),
+        model="openai/gpt-5.4-mini",
+        messages=[{"role": "user", "content": "return json"}],
+        task_name="json_task",
+        response_model=ExampleResponse,
+        client=cast(OpenRouterClient, fake_client),
+    )
+
+    assert result.answer == "yes"
+    assert len(fake_client.messages) == 2
+    assert calls[0]["success"] is False
+    assert calls[1]["success"] is True
 
 
 @pytest.mark.anyio

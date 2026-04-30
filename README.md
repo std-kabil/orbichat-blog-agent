@@ -40,6 +40,14 @@ curl http://localhost:8000/health
 
 ## Celery
 
+Run the full local backend stack:
+
+```bash
+./scripts/run_backend.sh
+```
+
+This starts PostgreSQL and Redis with Docker Compose, runs migrations, then starts FastAPI, the Celery worker, and Celery beat. Use `./scripts/run_backend.sh --help` for options.
+
 Worker:
 
 ```bash
