@@ -41,7 +41,7 @@ strict = true
 testpaths = ["tests"]
 
 [tool.setuptools.packages.find]
-include = ["app*", "api*", "agents*", "jobs*", "schemas*", "services*"]
+include = ["app*", "api*", "agents*", "jobs*", "repositories*", "schemas*", "services*"]
 exclude = ["tests*", "alembic*", "outputs*", "prompts*"]
 
 [build-system]

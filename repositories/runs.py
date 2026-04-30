@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.models import AgentRun
 from schemas.common import RunStatus, RunType
+from schemas.cost import CostSummary
 
 
 def create_run(db: Session, run_type: RunType) -> AgentRun:
@@ -71,6 +72,19 @@ def mark_run_failed(db: Session, run_id: UUID, error_message: str) -> AgentRun |
     run.finished_at = now
     run.updated_at = now
     run.error_message = error_message
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def update_run_totals(db: Session, run_id: UUID, costs: CostSummary) -> AgentRun | None:
+    run = get_run(db, run_id)
+    if run is None:
+        return None
+
+    run.total_cost_usd = costs.total_estimated_cost_usd
+    run.total_input_tokens = costs.total_input_tokens
+    run.total_output_tokens = costs.total_output_tokens
     db.commit()
     db.refresh(run)
     return run

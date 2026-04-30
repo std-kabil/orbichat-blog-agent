@@ -47,6 +47,7 @@ async def call_openrouter_text(
             topic_id=topic_id,
             latency_ms=latency_ms,
             usage=extract_llm_usage(completion),
+            success=True,
         )
         return content
     except Exception as exc:
@@ -81,7 +82,7 @@ async def call_openrouter_json(
 ) -> OutputModel:
     openrouter = client or OpenRouterClient(settings)
     started_at = monotonic_time()
-    response_format = {
+    response_format: dict[str, object] = {
         "type": "json_schema",
         "json_schema": {
             "name": response_model.__name__,
@@ -108,6 +109,7 @@ async def call_openrouter_json(
             topic_id=topic_id,
             latency_ms=latency_ms,
             usage=extract_llm_usage(completion),
+            success=True,
         )
         return parsed
     except Exception as exc:
