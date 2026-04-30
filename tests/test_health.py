@@ -1,9 +1,11 @@
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.config import Settings
+from app.main import create_app
 
 
 def test_health_endpoint_returns_service_status() -> None:
+    app = create_app(Settings(app_env="test", sentry_dsn=None))
     client = TestClient(app)
 
     response = client.get("/health")
@@ -16,6 +18,7 @@ def test_health_endpoint_returns_service_status() -> None:
 
 
 def test_root_endpoint_returns_service_status() -> None:
+    app = create_app(Settings(app_env="test", sentry_dsn=None))
     client = TestClient(app)
 
     response = client.get("/")

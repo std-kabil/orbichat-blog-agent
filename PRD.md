@@ -49,7 +49,7 @@ Build a production-ready Python backend service that can:
 5. Use Celery + Redis for long-running jobs.
 6. Use OpenRouter for all model calls, including Qwen, Kimi, GPT, and Claude-family models.
 7. Use a single model API key: `OPENROUTER_API_KEY`.
-8. Use Tavily, Exa, and Brave Search for research/source verification.
+8. Use Tavily and Exa for research/source verification, with Brave Search enabled only when `BRAVE_API_KEY` is configured.
 9. Track estimated token/model/search costs.
 10. Keep all outputs reviewable and auditable.
 11. Prepare integration points for the OrbiChat frontend/admin dashboard and Payload CMS later.
@@ -128,7 +128,7 @@ OpenRouter using an OpenAI-compatible API client for all model calls
 
 Tavily  
 Exa  
-Brave Search API  
+Brave Search API, optional and enabled only when `BRAVE_API_KEY` is configured  
 Google Trends/manual feed support can be represented as a placeholder module for now.
 
 ### Monitoring
@@ -160,7 +160,7 @@ Implement the code so model names are configurable through environment variables
 Tools:
 
 - Tavily
-- Brave
+- Brave, only when `BRAVE_API_KEY` is configured
 - Google Trends/manual feeds placeholder
 
 No LLM required by default except for normalization/deduplication if needed.
@@ -242,7 +242,7 @@ Tools:
 
 - Tavily
 - Exa
-- Brave
+- Brave, only when `BRAVE_API_KEY` is configured
 - deterministic rules
 
 Purpose:
@@ -777,7 +777,7 @@ Steps:
 1. Create `agent_runs` row with status `running`.
 2. Build seed queries for OrbiChat-relevant topics.
 3. Search Tavily.
-4. Search Brave.
+4. Search Brave only when `BRAVE_API_KEY` is configured.
 5. Optionally use manual Google Trends placeholder source.
 6. Normalize results into `TrendCandidate` schema.
 7. Deduplicate similar candidates.
@@ -829,7 +829,7 @@ Steps:
 7. Generate outline with Kimi.
 8. Write article with Claude Sonnet through OpenRouter.
 9. Extract factual claims with Kimi.
-10. Verify claims through Tavily/Exa/Brave and deterministic rules.
+10. Verify claims through Tavily/Exa, optional Brave when configured, and deterministic rules.
 11. Review risky claims with GPT-5.4 mini/GPT-5.4.
 12. Brand polish with Claude Sonnet through OpenRouter.
 13. Generate social posts with Claude Haiku through OpenRouter.

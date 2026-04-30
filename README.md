@@ -54,6 +54,8 @@ celery -A jobs.celery_app beat --loglevel=info
 
 The Phase 1 Celery tasks are placeholders and do not call OpenRouter, Tavily, Exa, Brave, Payload, R2, or Plausible.
 
+Brave Search is optional. If `BRAVE_API_KEY` is set, search workflows should include Brave as an additional provider; if it is empty, workflows should skip Brave without failing.
+
 ## Docker Compose
 
 ```bash

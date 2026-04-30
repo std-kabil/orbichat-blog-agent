@@ -1,16 +1,21 @@
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import sentry_sdk
 
+from api.routes_costs import router as costs_router
+from api.routes_drafts import router as drafts_router
 from api.routes_health import router as health_router
 from api.routes_runs import router as runs_router
+from api.routes_topics import router as topics_router
 from app.config import Settings, get_settings
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     app_settings = settings or get_settings()
 
-    if app_settings.sentry_dsn:
+    if app_settings.sentry_dsn and app_settings.app_env != "test" and "pytest" not in sys.modules:
         sentry_sdk.init(
             dsn=app_settings.sentry_dsn,
             environment=app_settings.app_env,
@@ -30,6 +35,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(runs_router)
+    app.include_router(topics_router)
+    app.include_router(drafts_router)
+    app.include_router(costs_router)
 
     return app
 

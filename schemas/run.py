@@ -3,20 +3,20 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from schemas.common import APIModel
+from schemas.common import APIModel, RunStatus, RunType
 
 
 class RunCreateResponse(APIModel):
     run_id: UUID
     job_id: str
-    run_type: str
-    status: str
+    run_type: RunType
+    status: RunStatus
 
 
 class RunRead(APIModel):
     id: UUID
-    run_type: str
-    status: str
+    run_type: RunType
+    status: RunStatus
     started_at: datetime | None
     finished_at: datetime | None
     total_cost_usd: Decimal

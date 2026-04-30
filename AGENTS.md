@@ -119,7 +119,7 @@ LLM/Search:
 * OpenRouter through an OpenAI-compatible client for all model calls
 * Tavily
 * Exa
-* Brave Search API
+* Brave Search API, optional and enabled only when `BRAVE_API_KEY` is configured
 
 Do not introduce LangChain, CrewAI, AutoGen, LlamaIndex, Django, Flask, or extra frameworks unless explicitly requested.
 
@@ -378,7 +378,7 @@ Fact-checking must not be model-only.
 Required flow:
 
 1. Extract factual claims using a model.
-2. Search for sources using Tavily, Exa, and/or Brave.
+2. Search for sources using Tavily and Exa; include Brave only when `BRAVE_API_KEY` is configured.
 3. Compare claims against retrieved sources.
 4. Mark each claim as:
 
