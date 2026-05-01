@@ -6,6 +6,7 @@ __pycache__/
 .venv/
 *.egg-info/
 .env
+celerybeat-schedule*
 outputs/*
 !outputs/.gitkeep
 .logs/*
