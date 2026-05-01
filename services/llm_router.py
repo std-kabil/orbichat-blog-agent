@@ -1,5 +1,6 @@
 import json
 import re
+from copy import deepcopy
 from typing import TypeVar, get_origin
 from uuid import UUID
 
@@ -104,7 +105,7 @@ async def call_openrouter_json(
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
 
-    schema_dict = response_model.model_json_schema()
+    schema_dict = _strict_response_schema(response_model.model_json_schema())
     response_format: dict[str, object] = {
         "type": "json_schema",
         "json_schema": {
@@ -219,6 +220,34 @@ def _parse_json_content(content: str, response_model: type[OutputModel]) -> Outp
     if validation_error is not None:
         raise validation_error
     raise ProviderResponseError("OpenRouter response content was empty")
+
+
+def _strict_response_schema(schema_dict: dict[str, object]) -> dict[str, object]:
+    """Normalize Pydantic JSON Schema for strict provider response formats."""
+    strict_schema = deepcopy(schema_dict)
+    _normalize_strict_schema_node(strict_schema)
+    return strict_schema
+
+
+def _normalize_strict_schema_node(node: object) -> None:
+    if isinstance(node, list):
+        for item in node:
+            _normalize_strict_schema_node(item)
+        return
+
+    if not isinstance(node, dict):
+        return
+
+    node.pop("default", None)
+
+    properties = node.get("properties")
+    if node.get("type") == "object" or isinstance(properties, dict):
+        node["additionalProperties"] = False
+        if isinstance(properties, dict):
+            node["required"] = list(properties.keys())
+
+    for value in node.values():
+        _normalize_strict_schema_node(value)
 
 
 def _strip_code_fences(content: str) -> str:

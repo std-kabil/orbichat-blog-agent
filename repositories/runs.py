@@ -35,6 +35,23 @@ def mark_run_running(db: Session, run_id: UUID) -> AgentRun | None:
     now = datetime.now(UTC)
     run.status = RunStatus.RUNNING.value
     run.started_at = now
+    run.finished_at = None
+    run.error_message = None
+    run.updated_at = now
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def mark_run_queued(db: Session, run_id: UUID) -> AgentRun | None:
+    run = get_run(db, run_id)
+    if run is None:
+        return None
+
+    now = datetime.now(UTC)
+    run.status = RunStatus.QUEUED.value
+    run.finished_at = None
+    run.error_message = None
     run.updated_at = now
     db.commit()
     db.refresh(run)
@@ -89,6 +106,18 @@ def mark_run_failed_with_metadata(
         return None
 
     run.metadata_json = metadata_json
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def update_run_metadata(db: Session, run_id: UUID, metadata_json: dict[str, Any]) -> AgentRun | None:
+    run = get_run(db, run_id)
+    if run is None:
+        return None
+
+    run.metadata_json = metadata_json
+    run.updated_at = datetime.now(UTC)
     db.commit()
     db.refresh(run)
     return run

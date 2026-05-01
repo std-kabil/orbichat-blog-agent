@@ -42,6 +42,10 @@ def _run(status: str = "queued") -> SimpleNamespace:
     )
 
 
+class FakeTask:
+    id = "job-1"
+
+
 def _topic(status: str = "candidate") -> SimpleNamespace:
     now = datetime(2026, 4, 30, tzinfo=UTC)
     return SimpleNamespace(
@@ -104,6 +108,43 @@ def test_get_run_returns_run(monkeypatch) -> None:  # type: ignore[no-untyped-de
 
     assert response.status_code == 200
     assert response.json()["id"] == str(run.id)
+
+
+def test_resume_failed_blog_generation_run_queues_resume(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    run = _run(status="failed")
+    run.run_type = "weekly_blog_generation"
+    run.metadata_json = {"topic_id": str(uuid4()), "completed_stages": ["article_draft"]}
+    queued: list[tuple[str, bool]] = []
+
+    monkeypatch.setattr("api.routes_runs.get_run", lambda db, run_id: run)
+    def fake_mark_queued(db: object, run_id: object) -> SimpleNamespace:
+        run.status = "queued"
+        return run
+
+    monkeypatch.setattr("api.routes_runs.mark_run_queued", fake_mark_queued)
+    monkeypatch.setattr(
+        "api.routes_runs.weekly_blog_generation.delay",
+        lambda run_id, resume: queued.append((run_id, resume)) or FakeTask(),
+    )
+
+    response = _client().post(f"/runs/{run.id}/resume", headers=_admin_headers())
+
+    assert response.status_code == 202
+    assert response.json()["run_id"] == str(run.id)
+    assert response.json()["status"] == "queued"
+    assert queued == [(str(run.id), True)]
+
+
+def test_resume_run_rejects_non_failed_run(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    run = _run(status="completed")
+    run.run_type = "weekly_blog_generation"
+    run.metadata_json = {"topic_id": str(uuid4())}
+
+    monkeypatch.setattr("api.routes_runs.get_run", lambda db, run_id: run)
+
+    response = _client().post(f"/runs/{run.id}/resume", headers=_admin_headers())
+
+    assert response.status_code == 409
 
 
 def test_topic_approve_updates_status(monkeypatch) -> None:  # type: ignore[no-untyped-def]

@@ -15,7 +15,7 @@ from app.models import Topic
 from jobs.weekly_blog_generation import weekly_blog_generation
 from repositories.drafts import create_generated_draft
 from repositories.fact_checks import create_fact_checks_from_verifications
-from schemas.common import SearchProvider
+from schemas.common import RunType, SearchProvider
 from schemas.search import NormalizedSearchResult, SearchProviderWarning, SearchRouterResult
 from schemas.workflow import (
     BlogDraftOutput,
@@ -319,6 +319,7 @@ async def test_weekly_orchestrator_completed_with_warning_metadata(monkeypatch) 
     calls: list[str] = []
 
     monkeypatch.setattr("agents.orchestrator.mark_run_running", lambda db, run_id: calls.append("running"))
+    monkeypatch.setattr("agents.orchestrator.update_run_metadata", lambda *args, **kwargs: None)
     monkeypatch.setattr("agents.orchestrator.get_topic", lambda db, topic_id: topic)
     monkeypatch.setattr(
         "agents.orchestrator.research_sources_for_topic",
@@ -395,11 +396,203 @@ async def test_weekly_orchestrator_completed_with_warning_metadata(monkeypatch) 
 
 
 @pytest.mark.anyio
+async def test_weekly_orchestrator_saves_draft_when_claim_verification_fails(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    run_id = uuid4()
+    topic = _topic()
+    draft_id = uuid4()
+    calls: list[str] = []
+
+    monkeypatch.setattr("agents.orchestrator.mark_run_running", lambda db, run_id: calls.append("running"))
+    monkeypatch.setattr("agents.orchestrator.update_run_metadata", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agents.orchestrator.get_topic", lambda db, topic_id: topic)
+    monkeypatch.setattr(
+        "agents.orchestrator.research_sources_for_topic",
+        lambda **kwargs: _async_return(([_source()], [])),
+    )
+    monkeypatch.setattr("agents.orchestrator.generate_seo_angles", lambda **kwargs: _async_return(_seo()))
+    monkeypatch.setattr("agents.orchestrator.generate_outline", lambda **kwargs: _async_return(_outline()))
+    monkeypatch.setattr(
+        "agents.orchestrator.write_article_draft",
+        lambda **kwargs: _async_return(_draft()),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.extract_claims",
+        lambda **kwargs: _async_return(
+            ClaimExtractionOutput(
+                claims=[
+                    {
+                        "claim": "OrbiChat supports multiple models.",
+                        "claim_type": "product_feature",
+                        "risk_level": "medium",
+                        "needs_verification": True,
+                    }
+                ]
+            )
+        ),
+    )
+
+    async def fail_verification(**kwargs: object) -> list[ClaimVerificationOutput]:
+        raise RuntimeError("Invalid schema for response_format")
+
+    monkeypatch.setattr("agents.orchestrator.verify_claims", fail_verification)
+    monkeypatch.setattr(
+        "agents.orchestrator.polish_brand_draft",
+        lambda **kwargs: pytest.fail("brand polish should be skipped without verifications"),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.create_generated_draft",
+        lambda *args, **kwargs: SimpleNamespace(id=draft_id, slug="best-ai-chat-apps-for-students"),
+    )
+    monkeypatch.setattr("agents.orchestrator.attach_sources_to_draft", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(
+        "agents.orchestrator.create_fact_checks_from_verifications",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr("agents.orchestrator.mark_topic_drafted", lambda db, topic_id: None)
+    monkeypatch.setattr(
+        "agents.orchestrator.generate_social_posts",
+        lambda **kwargs: _async_return(SocialPostsOutput(posts=[])),
+    )
+    monkeypatch.setattr("agents.orchestrator.create_draft_social_posts", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        "agents.orchestrator.judge_publish_readiness",
+        lambda **kwargs: pytest.fail("publish judgment should not be required for saved draft"),
+    )
+    monkeypatch.setattr("agents.orchestrator.update_publish_metadata", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agents.orchestrator.update_run_totals", lambda db, run_id, costs: None)
+    monkeypatch.setattr(
+        "agents.orchestrator.summarize_costs",
+        lambda db, run_id: SimpleNamespace(
+            total_estimated_cost_usd=0,
+            total_input_tokens=0,
+            total_output_tokens=0,
+        ),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.mark_run_completed",
+        lambda db, run_id, metadata_json: calls.append(f"completed:{metadata_json['draft_id']}"),
+    )
+
+    result = await run_weekly_blog_generation(
+        settings=Settings(app_env="test", auto_publish=False, sentry_dsn=None),
+        db=cast(Session, SimpleNamespace()),
+        run_id=run_id,
+        topic_id=cast(UUID, topic.id),
+    )
+
+    assert result.status == "completed"
+    assert result.draft_id == draft_id
+    assert any("claim_verification_failed" in warning for warning in result.warnings)
+    assert any("brand_polish_skipped" in warning for warning in result.warnings)
+    assert calls == ["running", f"completed:{draft_id}"]
+
+
+@pytest.mark.anyio
+async def test_weekly_orchestrator_resume_reuses_completed_checkpoints(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    run_id = uuid4()
+    topic = _topic()
+    source = _source()
+    draft_id = uuid4()
+    metadata = {
+        "topic_id": str(topic.id),
+        "warnings": ["previous_warning"],
+        "provider_warnings": [],
+        "checkpoints": {
+            "sources": {"source_ids": [str(source.id)]},
+            "seo_angles": _seo().model_dump(mode="json"),
+            "outline": _outline().model_dump(mode="json"),
+            "article_draft": _draft().model_dump(mode="json"),
+        },
+    }
+
+    monkeypatch.setattr(
+        "agents.orchestrator.get_run",
+        lambda db, run_id: SimpleNamespace(metadata_json=metadata),
+    )
+    monkeypatch.setattr("agents.orchestrator.mark_run_running", lambda db, run_id: None)
+    monkeypatch.setattr("agents.orchestrator.update_run_metadata", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agents.orchestrator.get_topic", lambda db, topic_id: topic)
+    monkeypatch.setattr("agents.orchestrator.list_sources_by_ids", lambda db, source_ids: [source])
+    monkeypatch.setattr(
+        "agents.orchestrator.research_sources_for_topic",
+        lambda **kwargs: pytest.fail("source research should be reused"),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.generate_seo_angles",
+        lambda **kwargs: pytest.fail("SEO angles should be reused"),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.generate_outline",
+        lambda **kwargs: pytest.fail("outline should be reused"),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.write_article_draft",
+        lambda **kwargs: pytest.fail("article draft should be reused"),
+    )
+    monkeypatch.setattr(
+        "agents.orchestrator.extract_claims",
+        lambda **kwargs: _async_return(ClaimExtractionOutput(claims=[])),
+    )
+    monkeypatch.setattr("agents.orchestrator.verify_claims", lambda **kwargs: _async_return([]))
+    monkeypatch.setattr(
+        "agents.orchestrator.create_generated_draft",
+        lambda *args, **kwargs: SimpleNamespace(id=draft_id, slug="best-ai-chat-apps-for-students"),
+    )
+    monkeypatch.setattr("agents.orchestrator.attach_sources_to_draft", lambda *args, **kwargs: 1)
+    monkeypatch.setattr(
+        "agents.orchestrator.create_fact_checks_from_verifications",
+        lambda *args, **kwargs: [],
+    )
+    monkeypatch.setattr("agents.orchestrator.mark_topic_drafted", lambda db, topic_id: None)
+    monkeypatch.setattr(
+        "agents.orchestrator.generate_social_posts",
+        lambda **kwargs: _async_return(SocialPostsOutput(posts=[])),
+    )
+    monkeypatch.setattr("agents.orchestrator.create_draft_social_posts", lambda *args, **kwargs: [])
+    monkeypatch.setattr(
+        "agents.orchestrator.judge_publish_readiness",
+        lambda **kwargs: _async_return(
+            PublishJudgmentOutput(
+                publish_ready=False,
+                score=70,
+                risk_level="medium",
+                required_fixes=[],
+                reasoning="Needs review.",
+            )
+        ),
+    )
+    monkeypatch.setattr("agents.orchestrator.update_publish_metadata", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agents.orchestrator.update_run_totals", lambda db, run_id, costs: None)
+    monkeypatch.setattr(
+        "agents.orchestrator.summarize_costs",
+        lambda db, run_id: SimpleNamespace(
+            total_estimated_cost_usd=0,
+            total_input_tokens=0,
+            total_output_tokens=0,
+        ),
+    )
+    monkeypatch.setattr("agents.orchestrator.mark_run_completed", lambda *args, **kwargs: None)
+
+    result = await run_weekly_blog_generation(
+        settings=Settings(app_env="test", auto_publish=False, sentry_dsn=None),
+        db=cast(Session, SimpleNamespace()),
+        run_id=run_id,
+        resume=True,
+    )
+
+    assert result.status == "completed"
+    assert result.draft_id == draft_id
+    assert "previous_warning" in result.warnings
+    assert "resumed_from_failed_run" in result.warnings
+
+
+@pytest.mark.anyio
 async def test_weekly_orchestrator_marks_failed_before_draft(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     run_id = uuid4()
     calls: list[str] = []
 
     monkeypatch.setattr("agents.orchestrator.mark_run_running", lambda db, run_id: calls.append("running"))
+    monkeypatch.setattr("agents.orchestrator.update_run_metadata", lambda *args, **kwargs: None)
     monkeypatch.setattr("agents.orchestrator.get_topic", lambda db, topic_id: _topic(id=topic_id))
 
     async def fail_research(**kwargs: object) -> tuple[list[object], list[object]]:
@@ -446,6 +639,68 @@ def test_weekly_job_closes_session_and_returns_metadata(monkeypatch) -> None:  #
     result = weekly_blog_generation(str(run_id))
 
     assert result["status"] == "completed"
+    assert fake_session.closed is True
+
+
+def test_weekly_job_forwards_resume_flag(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    fake_session = FakeSession()
+    run_id = uuid4()
+    calls: list[object] = []
+
+    monkeypatch.setattr("jobs.weekly_blog_generation.SessionLocal", lambda: fake_session)
+    monkeypatch.setattr("jobs.weekly_blog_generation.get_settings", lambda: Settings(app_env="test"))
+
+    def fake_generation(**kwargs: object) -> object:
+        calls.append(kwargs)
+        return _async_return(
+            SimpleNamespace(
+                model_dump=lambda mode: {
+                    "run_id": str(run_id),
+                    "status": "completed",
+                    "draft_id": str(uuid4()),
+                }
+            )
+        )
+
+    monkeypatch.setattr("jobs.weekly_blog_generation.run_weekly_blog_generation", fake_generation)
+
+    result = weekly_blog_generation(str(run_id), resume=True)
+
+    assert result["status"] == "completed"
+    assert calls[0]["resume"] is True
+    assert fake_session.closed is True
+
+
+def test_weekly_job_creates_run_when_scheduled_without_run_id(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    fake_session = FakeSession()
+    run_id = uuid4()
+    calls: list[object] = []
+
+    def fake_create_run(db: object, run_type: object) -> SimpleNamespace:
+        calls.append(run_type)
+        return SimpleNamespace(id=run_id)
+
+    monkeypatch.setattr("jobs.weekly_blog_generation.SessionLocal", lambda: fake_session)
+    monkeypatch.setattr("jobs.weekly_blog_generation.get_settings", lambda: Settings(app_env="test"))
+    monkeypatch.setattr("jobs.weekly_blog_generation.create_run", fake_create_run)
+    monkeypatch.setattr(
+        "jobs.weekly_blog_generation.run_weekly_blog_generation",
+        lambda **kwargs: _async_return(
+            SimpleNamespace(
+                model_dump=lambda mode: {
+                    "run_id": str(kwargs["run_id"]),
+                    "status": "completed",
+                    "draft_id": str(uuid4()),
+                }
+            )
+        ),
+    )
+
+    result = weekly_blog_generation()
+
+    assert result["run_id"] == str(run_id)
+    assert result["status"] == "completed"
+    assert calls == [RunType.WEEKLY_BLOG_GENERATION]
     assert fake_session.closed is True
 
 

@@ -15,7 +15,8 @@ from agents.trend_discovery import (
     group_topic_candidates,
 )
 from app.config import Settings
-from schemas.common import SearchProvider
+from jobs.daily_trend_scan import daily_trend_scan
+from schemas.common import RunType, SearchProvider
 from schemas.search import NormalizedSearchResult, SearchProviderWarning, SearchRouterResult
 from schemas.trend import TopicCandidateInput, TopicScoreOutput, TrendCandidateCreate
 from services.errors import ServiceConfigurationError
@@ -38,6 +39,14 @@ class FakeSearchRouter:
     ) -> SearchRouterResult:
         self.queries.append(query)
         return self.result
+
+
+class FakeSession:
+    def __init__(self) -> None:
+        self.closed = False
+
+    def close(self) -> None:
+        self.closed = True
 
 
 def _candidate(title: str, url: str | None, query: str = "AI chat apps") -> TrendCandidateCreate:
@@ -245,3 +254,39 @@ async def test_orchestrator_marks_failed_when_scoring_fails(monkeypatch) -> None
         )
 
     assert calls == ["running", "failed:scoring failed"]
+
+
+def test_daily_job_creates_run_when_scheduled_without_run_id(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    fake_session = FakeSession()
+    run_id = uuid4()
+    calls: list[object] = []
+
+    def fake_create_run(db: object, run_type: object) -> SimpleNamespace:
+        calls.append(run_type)
+        return SimpleNamespace(id=run_id)
+
+    monkeypatch.setattr("jobs.daily_trend_scan.SessionLocal", lambda: fake_session)
+    monkeypatch.setattr("jobs.daily_trend_scan.get_settings", lambda: Settings(app_env="test"))
+    monkeypatch.setattr("jobs.daily_trend_scan.create_run", fake_create_run)
+    monkeypatch.setattr(
+        "jobs.daily_trend_scan.run_daily_trend_scan",
+        lambda **kwargs: _async_return(
+            SimpleNamespace(
+                model_dump=lambda mode: {
+                    "run_id": str(kwargs["run_id"]),
+                    "status": "completed",
+                }
+            )
+        ),
+    )
+
+    result = daily_trend_scan()
+
+    assert result["run_id"] == str(run_id)
+    assert result["status"] == "completed"
+    assert calls == [RunType.DAILY_SCAN]
+    assert fake_session.closed is True
+
+
+async def _async_return(value: object) -> object:
+    return value

@@ -44,6 +44,14 @@ def list_sources_by_topic(db: Session, topic_id: UUID) -> list[Source]:
     return list(db.scalars(statement).all())
 
 
+def list_sources_by_ids(db: Session, source_ids: Iterable[UUID]) -> list[Source]:
+    ids = list(source_ids)
+    if not ids:
+        return []
+    statement = select(Source).where(Source.id.in_(ids)).order_by(Source.created_at.asc())
+    return list(db.scalars(statement).all())
+
+
 def list_sources_by_draft(db: Session, draft_id: UUID) -> list[Source]:
     statement = select(Source).where(Source.draft_id == draft_id).order_by(Source.created_at.asc())
     return list(db.scalars(statement).all())

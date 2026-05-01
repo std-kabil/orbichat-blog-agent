@@ -6,7 +6,7 @@ from pydantic import BaseModel, ValidationError
 
 from app.config import Settings
 from services.errors import ProviderResponseError, ServiceConfigurationError
-from services.llm_router import call_openrouter_json, call_openrouter_text
+from services.llm_router import _strict_response_schema, call_openrouter_json, call_openrouter_text
 from services.openrouter_client import OpenRouterClient
 
 
@@ -66,6 +66,14 @@ def test_openrouter_client_requires_api_key() -> None:
         OpenRouterClient(Settings(openrouter_api_key=None))
 
 
+def test_openrouter_json_schema_is_strict_provider_compatible() -> None:
+    schema = _strict_response_schema(ItemsResponse.model_json_schema())
+
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["items"]
+    assert "default" not in schema["properties"]["items"]
+
+
 @pytest.mark.anyio
 async def test_openrouter_text_returns_content_and_logs_usage(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     calls: list[dict[str, object]] = []
@@ -105,6 +113,12 @@ async def test_openrouter_json_validates_response_model() -> None:
     assert result.answer == "yes"
     assert fake_client.response_format is not None
     assert fake_client.response_format["type"] == "json_schema"
+    json_schema = fake_client.response_format["json_schema"]
+    assert isinstance(json_schema, dict)
+    schema = json_schema["schema"]
+    assert isinstance(schema, dict)
+    assert schema["additionalProperties"] is False
+    assert schema["required"] == ["answer"]
 
 
 @pytest.mark.anyio
