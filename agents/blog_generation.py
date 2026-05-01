@@ -18,6 +18,9 @@ from schemas.workflow import (
 )
 from services.llm_router import call_openrouter_json
 from services.openrouter_client import ChatMessage
+from services.prompts import load_prompt
+
+PROMPT_DIR = "blog_generation"
 
 
 async def generate_seo_angles(
@@ -32,11 +35,8 @@ async def generate_seo_angles(
         settings=settings,
         model=settings.seo_angles_model,
         messages=_messages(
-            system=(
-                "You are an SEO strategist for OrbiChat.ai, a multi-model AI chat platform. "
-                "Return only JSON matching the requested schema."
-            ),
-            user="Generate the best SEO angle for this weekly blog topic.",
+            system=_prompt("seo_angles.system.md"),
+            user=_prompt("seo_angles.user.md"),
             payload=_topic_payload(topic, sources),
         ),
         task_name="weekly_seo_angles",
@@ -61,12 +61,8 @@ async def generate_outline(
         settings=settings,
         model=settings.outline_model,
         messages=_messages(
-            system=(
-                "You create practical, source-aware blog outlines for OrbiChat.ai. "
-                "Include useful headings, FAQ ideas, internal links, and CTA placements. "
-                "Return only JSON matching the requested schema."
-            ),
-            user="Create a long-form article outline from the topic, sources, and SEO angle.",
+            system=_prompt("outline.system.md"),
+            user=_prompt("outline.user.md"),
             payload={**_topic_payload(topic, sources), "seo_angles": seo_angles.model_dump(mode="json")},
         ),
         task_name="weekly_outline",
@@ -92,13 +88,8 @@ async def write_article_draft(
         settings=settings,
         model=settings.article_writing_model,
         messages=_messages(
-            system=(
-                "You write natural, non-generic Markdown articles for OrbiChat.ai. "
-                "Use factual claims only when grounded in the supplied sources. "
-                "Do not invent citations, pricing, benchmarks, or product claims. "
-                "Return only JSON matching the requested schema."
-            ),
-            user="Write the complete article draft in Markdown.",
+            system=_prompt("article_draft.system.md"),
+            user=_prompt("article_draft.user.md"),
             payload={
                 **_topic_payload(topic, sources),
                 "seo_angles": seo_angles.model_dump(mode="json"),
@@ -126,11 +117,8 @@ async def extract_claims(
         settings=settings,
         model=settings.claim_extraction_model,
         messages=_messages(
-            system=(
-                "Extract factual claims from a blog article. Classify pricing, benchmark, news, "
-                "product feature, general, and opinion claims. Return only JSON."
-            ),
-            user="Extract claims that need fact checking or risk review.",
+            system=_prompt("claim_extraction.system.md"),
+            user=_prompt("claim_extraction.user.md"),
             payload=draft.model_dump(mode="json"),
         ),
         task_name="weekly_claim_extraction",
@@ -159,12 +147,8 @@ async def verify_claims(
         settings=settings,
         model=settings.risky_claim_review_model,
         messages=_messages(
-            system=(
-                "Verify extracted claims against the supplied source excerpts. Mark each claim as "
-                "supported, unsupported, unclear, or opinion. Review risky claims conservatively. "
-                "Return only JSON."
-            ),
-            user="Verify these claims and recommend keep, cite, rewrite, or remove.",
+            system=_prompt("claim_verification.system.md"),
+            user=_prompt("claim_verification.user.md"),
             payload={
                 "claims": claims.model_dump(mode="json")["claims"],
                 "sources": _source_payload(sources),
@@ -199,12 +183,8 @@ async def polish_brand_draft(
         settings=settings,
         model=settings.brand_polish_model,
         messages=_messages(
-            system=(
-                "Polish the article for clarity, tone, and OrbiChat brand fit. "
-                "Do not add new factual claims. Remove or rewrite unsupported risky claims. "
-                "Return only JSON matching the article draft schema."
-            ),
-            user="Polish this draft using the verification results.",
+            system=_prompt("brand_polish.system.md"),
+            user=_prompt("brand_polish.user.md"),
             payload={
                 "draft": draft.model_dump(mode="json"),
                 "claim_verifications": [item.model_dump(mode="json") for item in verifications],
@@ -233,11 +213,8 @@ async def generate_social_posts(
         settings=settings,
         model=settings.social_posts_model,
         messages=_messages(
-            system=(
-                "Generate concise draft social posts for X/Twitter, LinkedIn, Reddit-style post, "
-                "and a short announcement. Return only JSON."
-            ),
-            user="Create social posts for this blog draft.",
+            system=_prompt("social_posts.system.md"),
+            user=_prompt("social_posts.user.md"),
             payload=draft.model_dump(mode="json"),
         ),
         task_name="weekly_social_posts",
@@ -265,11 +242,8 @@ async def judge_publish_readiness(
         settings=settings,
         model=settings.publish_judgment_model,
         messages=_messages(
-            system=(
-                "You are the final publish safety reviewer. Be strict about factuality, usefulness, "
-                "brand fit, and source quality. Return only JSON."
-            ),
-            user="Judge whether this draft is ready for publication review.",
+            system=_prompt("publish_judgment.system.md"),
+            user=_prompt("publish_judgment.user.md"),
             payload={
                 "draft": draft.model_dump(mode="json"),
                 "deterministic_blockers": list(deterministic_blockers),
@@ -284,6 +258,10 @@ async def judge_publish_readiness(
         topic_id=topic_id,
         temperature=0.0,
     )
+
+
+def _prompt(file_name: str) -> str:
+    return load_prompt(f"{PROMPT_DIR}/{file_name}")
 
 
 def _messages(*, system: str, user: str, payload: object) -> list[ChatMessage]:

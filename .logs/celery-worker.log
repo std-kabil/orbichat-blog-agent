@@ -1,10 +1,10 @@
  
  -------------- celery@archlinux v5.6.3 (recovery)
 --- ***** ----- 
--- ******* ---- Linux-6.19.10-arch1-1-x86_64-with-glibc2.43 2026-05-01 06:54:35
+-- ******* ---- Linux-6.19.10-arch1-1-x86_64-with-glibc2.43 2026-05-02 00:31:35
 - *** --- * --- 
 - ** ---------- [config]
-- ** ---------- .> app:         orbichat_blog_agent:0x7f99f8106120
+- ** ---------- .> app:         orbichat_blog_agent:0x7f1d2077e660
 - ** ---------- .> transport:   redis://localhost:6379/0
 - ** ---------- .> results:     redis://localhost:6379/0
 - *** --- * --- .> concurrency: 24 (prefork)
@@ -19,35 +19,38 @@
   . jobs.daily_trend_scan.daily_trend_scan
   . jobs.weekly_blog_generation.weekly_blog_generation
 
-[2026-05-01 06:54:36,600: INFO/MainProcess] Connected to redis://localhost:6379/0
-[2026-05-01 06:54:36,602: INFO/MainProcess] mingle: searching for neighbors
-[2026-05-01 06:54:37,605: INFO/MainProcess] mingle: all alone
-[2026-05-01 06:54:37,613: INFO/MainProcess] celery@archlinux ready.
-[2026-05-01 06:56:33,623: INFO/MainProcess] Task jobs.daily_trend_scan.daily_trend_scan[b13a7373-54bb-45de-89cd-a839f054bcc2] received
-2026-05-01 06:56:33.658 | INFO     | services.monitoring:log_run_event:36 - daily_trend_scan_start
-[2026-05-01 06:56:35,434: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:37,482: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:39,427: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:40,929: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:43,421: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:44,852: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:47,722: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:48,871: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:50,691: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:53,261: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:55,504: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:56,780: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:56:58,878: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:00,215: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:02,332: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:03,703: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:06,154: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:07,589: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:09,533: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:10,967: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:12,750: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:14,143: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:16,086: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:18,135: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:19,875: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.tavily.com/search "HTTP/1.1 200 OK"
-[2026-05-01 06:57:21,207: INFO/ForkPoolWorker-13] HTTP Request: POST https://api.exa.ai/search "HTTP/1.1 200 OK"
+[2026-05-02 00:31:36,462: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-02 00:31:36,463: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-02 00:31:37,468: INFO/MainProcess] mingle: all alone
+[2026-05-02 00:31:37,474: INFO/MainProcess] celery@archlinux ready.
+
+Restarting celery worker (/home/kabil/miniconda3/bin/celery -A jobs.celery_app worker --loglevel=info)
+
+worker: Warm shutdown (MainProcess)
+
+Restarting celery worker (/home/kabil/miniconda3/bin/celery -A jobs.celery_app worker --loglevel=info)
+ 
+ -------------- celery@archlinux v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- Linux-6.19.10-arch1-1-x86_64-with-glibc2.43 2026-05-02 00:52:22
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         orbichat_blog_agent:0x7f5521ffe660
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 24 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> celery           exchange=celery(direct) key=celery
+                
+
+[tasks]
+  . jobs.analytics_sync.analytics_sync
+  . jobs.daily_trend_scan.daily_trend_scan
+  . jobs.weekly_blog_generation.weekly_blog_generation
+
+[2026-05-02 00:52:23,898: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-02 00:52:23,899: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-02 00:52:24,902: INFO/MainProcess] mingle: all alone
+[2026-05-02 00:52:24,907: INFO/MainProcess] celery@archlinux ready.

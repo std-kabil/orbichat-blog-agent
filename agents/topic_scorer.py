@@ -12,9 +12,11 @@ from services.errors import BudgetExceededError, ProviderResponseError, ServiceC
 from services.llm_router import call_openrouter_json
 from services.monitoring import log_run_event
 from services.openrouter_client import ChatMessage
+from services.prompts import load_prompt
 
 TOPIC_SCORING_TASK_NAME = "topic_scoring"
 FATAL_TOPIC_SCORING_EXCEPTIONS = (BudgetExceededError, ServiceConfigurationError)
+PROMPT_DIR = "topic_scorer"
 
 
 async def score_and_store_topics(
@@ -86,26 +88,17 @@ def _topic_scoring_messages(topic_input: TopicCandidateInput) -> list[ChatMessag
     return [
         {
             "role": "system",
-            "content": (
-                "You score blog topic opportunities for OrbiChat.ai, a multi-model AI chat platform. "
-                "Return only structured JSON matching the provided schema. Use scores from 0 to 100. "
-                "Never echo the input trend cluster. Create a new scored blog topic object."
-            ),
+            "content": _prompt("score_candidate.system.md"),
         },
         {
             "role": "user",
-            "content": (
-                "Score this trend cluster for organic search, OrbiChat relevance, and conversion potential. "
-                "Prefer practical topics around AI chat, model comparisons, productivity, students, writers, "
-                "developers, and multi-model workflows.\n\n"
-                "You must return exactly these top-level JSON fields: title, target_keyword, search_intent, "
-                "trend_score, orbichat_relevance_score, seo_score, conversion_score, total_score, "
-                "recommended, reasoning, cta_angle.\n\n"
-                "Trend cluster input:\n"
-                f"{json.dumps(payload, ensure_ascii=False)}"
-            ),
+            "content": f"{_prompt('score_candidate.user.md')}\n{json.dumps(payload, ensure_ascii=False)}",
         },
     ]
+
+
+def _prompt(file_name: str) -> str:
+    return load_prompt(f"{PROMPT_DIR}/{file_name}")
 
 
 def build_fallback_topic_score(

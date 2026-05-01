@@ -15,6 +15,7 @@ COPY jobs ./jobs
 COPY repositories ./repositories
 COPY schemas ./schemas
 COPY services ./services
+COPY prompts ./prompts
 COPY alembic ./alembic
 COPY alembic.ini ./
 

@@ -2,7 +2,7 @@ from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     app_name: str = "orbichat-blog-agent"
     api_host: str = "0.0.0.0"
     api_port: int = 8000
+    admin_api_key: SecretStr | None = None
 
     database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/orbichat_blog_agent"
     redis_url: str = "redis://localhost:6379/0"
@@ -91,6 +92,19 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     )
+
+    @model_validator(mode="after")
+    def validate_production_admin_auth(self) -> "Settings":
+        if self.app_env not in {"staging", "production"}:
+            return self
+
+        admin_api_key = self.admin_api_key.get_secret_value() if self.admin_api_key else None
+        if not admin_api_key:
+            raise ValueError("ADMIN_API_KEY is required in staging and production")
+        if len(admin_api_key) < 32:
+            raise ValueError("ADMIN_API_KEY must be at least 32 characters in staging and production")
+
+        return self
 
 
 @lru_cache

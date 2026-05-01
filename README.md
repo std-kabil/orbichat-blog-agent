@@ -18,6 +18,8 @@ Update `.env` for your local PostgreSQL and Redis instances if needed.
 
 Model calls are configured through OpenRouter only. Set `OPENROUTER_API_KEY`; do not add separate Anthropic or OpenAI API keys for individual models.
 
+Set `ADMIN_API_KEY` to protect all operator/admin API routes. `ADMIN_API_KEY` is required in staging and production and must be at least 32 characters there.
+
 ## Database
 
 Run migrations from this directory:
@@ -36,6 +38,12 @@ Health check:
 
 ```bash
 curl http://localhost:8000/health
+```
+
+Admin API calls require either `Authorization: Bearer $ADMIN_API_KEY` or `X-Admin-API-Key: $ADMIN_API_KEY`:
+
+```bash
+curl -H "Authorization: Bearer $ADMIN_API_KEY" http://localhost:8000/runs
 ```
 
 ## Celery
@@ -75,9 +83,9 @@ Search calls must go through `services/search_router.py` or the provider-specifi
 Start the API, worker, Redis, and PostgreSQL, then trigger a scan:
 
 ```bash
-curl -X POST http://localhost:8000/runs/daily-scan
-curl http://localhost:8000/runs
-curl http://localhost:8000/topics
+curl -H "Authorization: Bearer $ADMIN_API_KEY" -X POST http://localhost:8000/runs/daily-scan
+curl -H "Authorization: Bearer $ADMIN_API_KEY" http://localhost:8000/runs
+curl -H "Authorization: Bearer $ADMIN_API_KEY" http://localhost:8000/topics
 ```
 
 The workflow searches the enabled providers, stores raw trend candidates, deduplicates/group candidates, scores topic opportunities through OpenRouter, saves candidate topics, and records run metadata. At least one search provider key and `OPENROUTER_API_KEY` are required for a real run.
@@ -111,8 +119,13 @@ python -m mypy .
 
 ## Endpoints
 
+Public:
+
 - `GET /`
 - `GET /health`
+
+Admin protected:
+
 - `POST /runs/daily-scan`
 - `POST /runs/weekly-blog-generation`
 - `GET /runs`

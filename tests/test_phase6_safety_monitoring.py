@@ -24,6 +24,8 @@ from services.pricing import calculate_llm_cost, calculate_search_cost, estimate
 from services.search_router import SearchRouter
 from services.tavily_client import TavilySearchClient
 
+ADMIN_API_KEY = "test-admin-secret"
+
 
 class ExampleResponse(BaseModel):
     answer: str
@@ -243,12 +245,15 @@ def test_safety_report_endpoint_returns_summary(monkeypatch) -> None:  # type: i
         severity="high",
     )
 
-    app = create_app(Settings(app_env="test", sentry_dsn=None))
+    app = create_app(Settings(app_env="test", sentry_dsn=None, admin_api_key=ADMIN_API_KEY))
     app.dependency_overrides[get_database_session] = lambda: object()
     monkeypatch.setattr("api.routes_drafts.get_draft", lambda db, draft_id: draft)
     monkeypatch.setattr("api.routes_drafts.list_fact_checks_by_draft", lambda db, draft_id: [fact_check])
 
-    response = TestClient(app).get(f"/drafts/{draft_id}/safety-report")
+    response = TestClient(app).get(
+        f"/drafts/{draft_id}/safety-report",
+        headers={"Authorization": f"Bearer {ADMIN_API_KEY}"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -280,11 +285,14 @@ def test_publish_judgment_endpoint_uses_safety_service(monkeypatch) -> None:  # 
     async def fake_safety_service(**kwargs: object) -> DraftSafetyReport:
         return report
 
-    app = create_app(Settings(app_env="test", sentry_dsn=None))
+    app = create_app(Settings(app_env="test", sentry_dsn=None, admin_api_key=ADMIN_API_KEY))
     app.dependency_overrides[get_database_session] = lambda: object()
     monkeypatch.setattr("api.routes_drafts.run_publish_safety_for_draft", fake_safety_service)
 
-    response = TestClient(app).post(f"/drafts/{draft_id}/publish-judgment")
+    response = TestClient(app).post(
+        f"/drafts/{draft_id}/publish-judgment",
+        headers={"Authorization": f"Bearer {ADMIN_API_KEY}"},
+    )
 
     assert response.status_code == 200
     assert response.json()["publish_score"] == 80

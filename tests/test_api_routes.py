@@ -11,11 +11,17 @@ from app.main import create_app
 from schemas.common import TopicStatus
 from schemas.cost import CostSummary
 
+ADMIN_API_KEY = "test-admin-secret"
+
 
 def _client() -> TestClient:
-    app = create_app(Settings(app_env="test", sentry_dsn=None))
+    app = create_app(Settings(app_env="test", sentry_dsn=None, admin_api_key=ADMIN_API_KEY))
     app.dependency_overrides[get_database_session] = lambda: object()
     return TestClient(app)
+
+
+def _admin_headers() -> dict[str, str]:
+    return {"Authorization": f"Bearer {ADMIN_API_KEY}"}
 
 
 def _run(status: str = "queued") -> SimpleNamespace:
@@ -85,7 +91,7 @@ def _draft() -> SimpleNamespace:
 def test_get_run_returns_not_found(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setattr("api.routes_runs.get_run", lambda db, run_id: None)
 
-    response = _client().get(f"/runs/{uuid4()}")
+    response = _client().get(f"/runs/{uuid4()}", headers=_admin_headers())
 
     assert response.status_code == 404
 
@@ -94,7 +100,7 @@ def test_get_run_returns_run(monkeypatch) -> None:  # type: ignore[no-untyped-de
     run = _run()
     monkeypatch.setattr("api.routes_runs.get_run", lambda db, run_id: run)
 
-    response = _client().get(f"/runs/{run.id}")
+    response = _client().get(f"/runs/{run.id}", headers=_admin_headers())
 
     assert response.status_code == 200
     assert response.json()["id"] == str(run.id)
@@ -106,7 +112,7 @@ def test_topic_approve_updates_status(monkeypatch) -> None:  # type: ignore[no-u
 
     monkeypatch.setattr("api.routes_topics.update_topic_status", fake_update)
 
-    response = _client().post(f"/topics/{uuid4()}/approve")
+    response = _client().post(f"/topics/{uuid4()}/approve", headers=_admin_headers())
 
     assert response.status_code == 200
     assert response.json()["status"] == "approved"
@@ -116,7 +122,7 @@ def test_draft_list_returns_drafts(monkeypatch) -> None:  # type: ignore[no-unty
     draft = _draft()
     monkeypatch.setattr("api.routes_drafts.list_drafts_repo", lambda db, limit: [draft])
 
-    response = _client().get("/drafts")
+    response = _client().get("/drafts", headers=_admin_headers())
 
     assert response.status_code == 200
     assert response.json()[0]["id"] == str(draft.id)
@@ -136,7 +142,43 @@ def test_cost_summary_returns_zeroes(monkeypatch) -> None:  # type: ignore[no-un
         ),
     )
 
-    response = _client().get("/costs/summary")
+    response = _client().get("/costs/summary", headers=_admin_headers())
 
     assert response.status_code == 200
     assert response.json()["total_estimated_cost_usd"] == "0"
+
+
+def test_health_routes_do_not_require_admin_auth() -> None:
+    response = _client().get("/health")
+
+    assert response.status_code == 200
+
+
+def test_admin_routes_reject_missing_credentials() -> None:
+    response = _client().get("/runs")
+
+    assert response.status_code == 401
+    assert response.headers["WWW-Authenticate"] == "Bearer"
+
+
+def test_admin_routes_reject_invalid_credentials() -> None:
+    response = _client().get("/runs", headers={"Authorization": "Bearer wrong"})
+
+    assert response.status_code == 403
+
+
+def test_admin_routes_accept_x_admin_api_key_header(monkeypatch) -> None:  # type: ignore[no-untyped-def]
+    monkeypatch.setattr("api.routes_runs.list_runs_repo", lambda db, limit: [])
+
+    response = _client().get("/runs", headers={"X-Admin-API-Key": ADMIN_API_KEY})
+
+    assert response.status_code == 200
+
+
+def test_admin_routes_fail_closed_when_auth_is_not_configured() -> None:
+    app = create_app(Settings(app_env="test", sentry_dsn=None))
+    app.dependency_overrides[get_database_session] = lambda: object()
+
+    response = TestClient(app).get("/runs", headers=_admin_headers())
+
+    assert response.status_code == 503

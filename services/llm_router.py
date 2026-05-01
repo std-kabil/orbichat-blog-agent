@@ -12,6 +12,7 @@ from services.cost_tracker import elapsed_ms, extract_llm_usage, monotonic_time,
 from services.errors import ProviderResponseError
 from services.openrouter_client import ChatMessage, OpenRouterClient, extract_message_content
 from services.pricing import estimate_llm_call_cost
+from services.prompts import render_prompt
 
 OutputModel = TypeVar("OutputModel", bound=BaseModel)
 
@@ -292,16 +293,11 @@ def _prepend_schema_instruction(
     )
     instruction: ChatMessage = {
         "role": "system",
-        "content": (
-            f"Output format: a single JSON object that conforms exactly to the JSON schema for "
-            f"{model_name} below. Strict requirements:\n"
-            f"- No markdown, no code fences, no surrounding text or commentary.\n"
-            f"- Use ONLY the field names defined in the schema. Do not rename, add, or omit fields.\n"
-            f"- Respect each field's declared type and constraints (e.g. integer ranges, enums).\n"
-            f"- Do NOT echo or copy any fields from the input payload. The output schema is "
-            f"different from the input schema; produce new values that satisfy the task.\n"
-            f"{required_summary}\n"
-            f"Schema for {model_name}:\n{json.dumps(schema_dict, ensure_ascii=False)}"
+        "content": render_prompt(
+            "llm_router/json_schema_instruction.system.md",
+            model_name=model_name,
+            required_summary=required_summary.rstrip(),
+            schema_json=json.dumps(schema_dict, ensure_ascii=False),
         ),
     }
     return [instruction, *messages]
@@ -316,13 +312,10 @@ def _build_retry_followup(
         {"role": "assistant", "content": bad_content},
         {
             "role": "user",
-            "content": (
-                f"Your previous response did not satisfy the {model_name} schema. "
-                f"Validation errors:\n{parse_error!s}\n\n"
-                f"Reply now with ONE corrected JSON object that matches the {model_name} schema "
-                "exactly. Use the exact field names from the schema. Do NOT echo the input "
-                "payload's fields. Do NOT wrap in code fences. Do NOT add commentary. "
-                "Generate fresh values that satisfy each field's type and constraints."
+            "content": render_prompt(
+                "llm_router/json_retry.user.md",
+                model_name=model_name,
+                parse_error=parse_error,
             ),
         },
     ]
