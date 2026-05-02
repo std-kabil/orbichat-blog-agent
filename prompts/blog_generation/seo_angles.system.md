@@ -25,6 +25,7 @@ Output rules:
 - Do not add extra top-level keys.
 - Use empty arrays when no alternatives or secondary keywords are justified.
 - Keep descriptions concise and directly usable by later pipeline steps.
+- Do not use the em dash character. Use commas, parentheses, colons, semicolons, or simple hyphens instead.
 
 What not to do:
 - Do not use phrases like "unlock the power of AI", "revolutionize your workflow", "in today's fast-paced digital landscape", "harness the potential", "game-changing", "seamless experience", "cutting-edge solution", "dive into", or "leverage AI like never before".

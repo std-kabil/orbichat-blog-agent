@@ -54,6 +54,31 @@ class BlogDraftOutput(APIModel):
     notes: str
 
 
+class DraftFeedbackOutput(APIModel):
+    score: int = Field(ge=0, le=100)
+    summary: str
+    strengths: list[str] = Field(default_factory=list)
+    priority_fixes: list[str] = Field(default_factory=list)
+    source_and_citation_fixes: list[str] = Field(default_factory=list)
+    structure_fixes: list[str] = Field(default_factory=list)
+    seo_fixes: list[str] = Field(default_factory=list)
+    factual_risk_notes: list[str] = Field(default_factory=list)
+
+
+class DraftRegenerateRequest(APIModel):
+    additional_instructions: str | None = Field(default=None, max_length=4000)
+
+
+class DraftRegenerationResult(APIModel):
+    parent_draft_id: UUID
+    draft_id: UUID
+    topic_id: UUID
+    version: int
+    feedback: DraftFeedbackOutput
+    publish_ready: bool = False
+    publish_score: int | None = None
+
+
 class ExtractedClaim(APIModel):
     claim: str
     claim_type: ClaimType

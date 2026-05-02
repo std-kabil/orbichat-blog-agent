@@ -3,6 +3,7 @@ from typing import Any
 from uuid import UUID
 
 from schemas.common import APIModel, DraftStatus
+from schemas.workflow import DraftFeedbackOutput
 
 
 class DraftRead(APIModel):
@@ -23,3 +24,11 @@ class DraftRead(APIModel):
     payload_post_id: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class DraftFeedbackRead(APIModel):
+    draft_id: UUID
+    feedback: DraftFeedbackOutput | None
+    model: str | None = None
+    created_from_draft_id: UUID | None = None
+    additional_instructions: str | None = None

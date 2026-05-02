@@ -26,6 +26,7 @@ Output rules:
 - Do not add extra top-level keys.
 - Use arrays for `sections`, `faq`, `internal_links`, and `cta_placements`; use empty arrays when unknown.
 - Slug must be lowercase, hyphenated, and URL-safe.
+- Do not use the em dash character. Use commas, parentheses, colons, semicolons, or simple hyphens instead.
 
 What not to do:
 - Do not create filler sections.

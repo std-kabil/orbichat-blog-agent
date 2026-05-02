@@ -29,6 +29,7 @@ Output rules:
 - `risk_level` must be one of: `low`, `medium`, `high`.
 - Keep `reasoning` concise and audit-friendly.
 - Use `required_fixes` for concrete editor actions; use an empty array only when no fixes are required.
+- Do not use the em dash character.
 
 What not to do:
 - Do not reveal hidden reasoning.

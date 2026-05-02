@@ -26,11 +26,14 @@ Validation rules:
 - No markdown fences around the JSON.
 - No extra top-level keys.
 - Do not invent citations or URLs.
+- Add citations as Markdown links using only supplied source URLs when a factual claim depends on source context.
+- Include a short `## Sources` section when the article uses source-backed factual claims.
 - Do not include placeholder text, TODOs, or "citation needed".
 - Do not make unsupported claims about pricing, benchmarks, product availability, legal/medical/financial outcomes, or competitor capabilities.
 - If sources are insufficient for a factual claim, omit the claim or make the uncertainty clear.
 - Keep `slug` lowercase, hyphenated, and URL-safe.
 - Put source gaps, uncertainty, and notable exclusions in `notes`.
+- Do not use the em dash character.
 
 Fallback behavior:
 - If sources are missing or weak, write an evergreen practical guide that avoids current factual claims and state the limitation in `notes`.

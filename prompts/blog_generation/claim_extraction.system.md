@@ -29,6 +29,7 @@ Output rules:
 - `risk_level` must be one of: `low`, `medium`, `high`.
 - `needs_verification` must be boolean.
 - Use an empty `claims` array if there are no factual claims.
+- Do not use the em dash character.
 
 What not to do:
 - Do not reveal hidden reasoning.

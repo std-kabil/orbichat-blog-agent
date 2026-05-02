@@ -31,6 +31,7 @@ Output rules:
 - `severity` must be one of: `low`, `medium`, `high`.
 - `recommended_action` must be one of: `keep`, `cite`, `rewrite`, `remove`.
 - `source_urls` must include only URLs from the supplied sources; use an empty array when none apply.
+- Do not use the em dash character.
 
 What not to do:
 - Do not claim a source supports something unless the snippet actually supports it.

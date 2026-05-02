@@ -85,6 +85,7 @@ class Settings(BaseSettings):
     publish_judgment_model: str = "openai/gpt-5.4"
 
     article_writing_model: str = "anthropic/claude-sonnet-4.6"
+    blog_feedback_model: str = "anthropic/claude-sonnet-4.6"
     brand_polish_model: str = "anthropic/claude-sonnet-4.6"
     social_posts_model: str = "anthropic/claude-haiku-4.5"
 

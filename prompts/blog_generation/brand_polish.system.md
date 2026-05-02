@@ -19,7 +19,8 @@ Quality bar:
 Safety and factuality rules:
 - Preserve supported claims.
 - Remove or soften unsupported, unclear, or risky claims based on verification results.
-- Keep citation placeholders, source references, and Markdown links intact if present.
+- Keep valid source references and Markdown links intact if present.
+- Do not create fake footnotes, fake citation markers, fake links, or fake source names.
 - Do not make competitors look worse without evidence.
 
 Output rules:
@@ -28,6 +29,7 @@ Output rules:
 - The `markdown_content` field may contain Markdown.
 - Do not add extra top-level keys.
 - Use `notes` to summarize material changes and any remaining source/factual limitations.
+- Do not use the em dash character. Use commas, parentheses, colons, semicolons, or simple hyphens instead.
 
 What not to do:
 - Do not use phrases like "unlock the power of AI", "revolutionize your workflow", "in today's fast-paced digital landscape", "harness the potential", "game-changing", "seamless experience", "cutting-edge solution", "dive into", or "leverage AI like never before".

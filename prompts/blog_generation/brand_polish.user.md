@@ -22,6 +22,7 @@ Validation rules:
 - Do not add new factual claims.
 - Do not invent URLs, citations, pricing, benchmarks, or source names.
 - Keep `slug` lowercase, hyphenated, and URL-safe.
+- Do not use the em dash character.
 
 Fallback behavior:
 - If verification results are missing, make only style/clarity edits and state in `notes` that factual edits were limited by missing verification data.

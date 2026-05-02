@@ -11,6 +11,7 @@ from schemas.workflow import (
     ClaimExtractionOutput,
     ClaimVerificationBatchOutput,
     ClaimVerificationOutput,
+    DraftFeedbackOutput,
     OutlineOutput,
     PublishJudgmentOutput,
     SEOAnglesOutput,
@@ -102,6 +103,74 @@ async def write_article_draft(
         run_id=run_id,
         topic_id=topic.id,
         temperature=0.4,
+    )
+
+
+async def review_draft_for_regeneration(
+    *,
+    settings: Settings,
+    db: Session,
+    run_id: UUID | None,
+    draft_id: UUID,
+    topic: Topic,
+    draft: BlogDraftOutput,
+    sources: Sequence[Source],
+    publish_score: int | None,
+) -> DraftFeedbackOutput:
+    return await call_openrouter_json(
+        settings=settings,
+        model=settings.blog_feedback_model,
+        messages=_messages(
+            system=_prompt("draft_feedback.system.md"),
+            user=_prompt("draft_feedback.user.md"),
+            payload={
+                **_topic_payload(topic, sources),
+                "draft": draft.model_dump(mode="json"),
+                "publish_score": publish_score,
+            },
+        ),
+        task_name="draft_feedback",
+        response_model=DraftFeedbackOutput,
+        db=db,
+        run_id=run_id,
+        draft_id=draft_id,
+        topic_id=topic.id,
+        temperature=0.1,
+    )
+
+
+async def regenerate_article_draft(
+    *,
+    settings: Settings,
+    db: Session,
+    run_id: UUID | None,
+    parent_draft_id: UUID,
+    topic: Topic,
+    sources: Sequence[Source],
+    current_draft: BlogDraftOutput,
+    feedback: DraftFeedbackOutput,
+    additional_instructions: str | None,
+) -> BlogDraftOutput:
+    return await call_openrouter_json(
+        settings=settings,
+        model=settings.article_writing_model,
+        messages=_messages(
+            system=_prompt("draft_regeneration.system.md"),
+            user=_prompt("draft_regeneration.user.md"),
+            payload={
+                **_topic_payload(topic, sources),
+                "current_draft": current_draft.model_dump(mode="json"),
+                "feedback": feedback.model_dump(mode="json"),
+                "additional_instructions": additional_instructions,
+            },
+        ),
+        task_name="draft_regeneration",
+        response_model=BlogDraftOutput,
+        db=db,
+        run_id=run_id,
+        draft_id=parent_draft_id,
+        topic_id=topic.id,
+        temperature=0.35,
     )
 
 

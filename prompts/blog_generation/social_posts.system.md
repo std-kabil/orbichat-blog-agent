@@ -29,6 +29,7 @@ Output rules:
 - Do not add extra top-level keys.
 - Return exactly one post for each platform: `x`, `linkedin`, `reddit`, `short_announcement`.
 - `metadata` must be an object of string keys and string values; use `{}` if none.
+- Do not use the em dash character.
 
 What not to do:
 - Do not use phrases like "game-changing", "revolutionary", "you won't believe", or "transform your productivity forever".
